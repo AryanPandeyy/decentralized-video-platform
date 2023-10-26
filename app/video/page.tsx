@@ -1,5 +1,5 @@
 "use client";
-import playlist from "@/build/contracts/playlist.json";
+import playlist from "@/build/contracts/PlayList.json";
 import { useEffect } from "react";
 import Web3 from "web3";
 
@@ -14,7 +14,7 @@ export default function Video() {
     console.log("Account Address ", accounts);
     const playListFunciton = new web3.eth.Contract(
       playlist.abi,
-      accounts[0]
+      playlist.networks[id].address,
     );
     const result = await playListFunciton.methods.myFunction().call();
     console.log("RESULT ", result);
