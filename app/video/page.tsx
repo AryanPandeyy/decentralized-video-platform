@@ -1,51 +1,83 @@
 "use client";
-import playlist from "@/build/contracts/PlayList.json";
-import { useEffect, useState } from "react";
-import { create } from "kubo-rpc-client";
-import Web3 from "web3";
+import { Helia, createHelia } from "helia";
+import React, { useState, useEffect } from "react";
+import { webSockets } from "@libp2p/websockets";
+import * as Filters from "@libp2p/websockets/filters";
+import { unixfs } from "@helia/unixfs";
+import { bootstrap } from "@libp2p/bootstrap";
+import { createLibp2p } from "libp2p";
 
-export default function Video() {
-  const [selectedFile, setSelectedFile] = useState<File>();
-  const web3 = new Web3(window.ethereum);
-  console.log("ETH PROVIDER ", web3.eth);
-  const ipfsClient = create(new URL("http://127.0.0.1:5001"));
-  const init = async (): Promise<void> => {
-    await window.ethereum.request({ method: "eth_requestAccounts" });
-    const accounts = await web3.eth.getAccounts();
-    const id = await web3.eth.net.getId();
-    console.log("ID ", id);
-    console.log("Account Address ", accounts);
-    const playListFunciton = new web3.eth.Contract(
-      playlist.abi,
-      playlist.networks[id].address,
-    );
-    const result = await playListFunciton.methods.myFunction().call();
-    console.log("RESULT ", result);
-  };
+const IpfsComponent = () => {
+  const [id, setId] = useState(null);
+  const [helia, setHelia] = useState<Helia>();
+  const [isOnline, setIsOnline] = useState(false);
 
   const handleUpload = async (e) => {
     e.preventDefault();
     try {
-      // const { path, cid, size } = await ipfsClient.add("test");
-      // console.log(path);
-      const result = ipfsClient.cat(
-        "QmRf22bZar3WKmojipms22PkXH1MZGmvsqzQtuSvQE3uhm",
-      );
-      for await (const num of result) {
-        console.log(num)
-      }
     } catch (e) {
       console.log(e);
     }
   };
 
   useEffect(() => {
+    const init = async () => {
+      const libp2p = await createLibp2p({
+        // ..other config
+        transports: [
+          webSockets({
+            filter: Filters.all, // this is necessary to dial insecure websockets
+          }),
+          // other transports
+        ],
+        connectionGater: {
+          denyDialMultiaddr: () => false, // this is necessary to dial local addresses at all
+        },
+        peerDiscovery: [
+          bootstrap({
+            list: [
+              `/ip4/127.0.0.1/tcp/9096/ws/p2p/12D3KooWBxiPpEYAVVpgeKBmvM4goeTEtEhemTn1ayKV3DNUxMwL`,
+            ],
+          }),
+        ],
+      });
+
+      if (helia) return;
+
+      const heliaNode = await createHelia({ libp2p });
+      setHelia(heliaNode);
+      const fs = unixfs(heliaNode);
+      // we will use this TextEncoder to turn strings into Uint8Arrays
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode("custom");
+
+      // add the bytes to your node and receive a unique content identifier
+      const cid = await fs.addBytes(bytes);
+
+      console.log("Added file:", cid.toString());
+      const decoder = new TextDecoder();
+      let text = "";
+
+      for await (const chunk of fs.cat(cid)) {
+        text += decoder.decode(chunk, {
+          stream: true,
+        });
+      }
+
+      console.log("Added file contents:", text);
+    };
+
     init();
-  }, []);
+  }, [helia]);
+
+  if (!helia || !id) {
+    return <h4>Connecting to IPFS...</h4>;
+  }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <h1 className="text-3xl">Decentralized Video Sharing Platform</h1>
+    <div>
+      <h4 data-test="id">ID: {id.toString()}</h4>
+      <h4 data-test="status">Status: {isOnline ? "Online" : "Offline"}</h4>
       <form onSubmit={handleUpload}>
         <input
           type="file"
@@ -53,6 +85,7 @@ export default function Video() {
         />
         <button type="submit">Upload</button>
       </form>
-    </main>
+    </div>
   );
-}
+};
+export default IpfsComponent;
