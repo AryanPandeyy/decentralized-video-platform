@@ -8,13 +8,31 @@ import { bootstrap } from "@libp2p/bootstrap";
 import { createLibp2p } from "libp2p";
 
 const IpfsComponent = () => {
-  const [id, setId] = useState(null);
   const [helia, setHelia] = useState<Helia>();
-  const [isOnline, setIsOnline] = useState(false);
-
+  const [data, setData] = useState();
+  const [previewImg, setPreviewImg] = useState();
+  const [selectedFile, setSelectedFile] = useState<any>();
   const handleUpload = async (e) => {
     e.preventDefault();
     try {
+      if (!helia) return;
+      const fs = unixfs(helia);
+      const reader = new window.FileReader();
+      if (!selectedFile) return;
+      reader.readAsArrayBuffer(selectedFile);
+      reader.onloadend = async () => {
+        if (!reader.result) return;
+
+        const cid = await fs.addFile({
+          content: Buffer(reader.result),
+        });
+        console.log(cid.toString());
+        for await (const chunk of fs.cat(cid)) {
+          const image = Buffer.from(chunk).toString("base64");
+          setPreviewImg("data:image/png;base64," + image);
+        }
+      };
+      console.log(selectedFile);
     } catch (e) {
       console.log(e);
     }
@@ -46,6 +64,7 @@ const IpfsComponent = () => {
 
       const heliaNode = await createHelia({ libp2p });
       setHelia(heliaNode);
+      console.log(heliaNode.libp2p.peerId);
       const fs = unixfs(heliaNode);
       // we will use this TextEncoder to turn strings into Uint8Arrays
       const encoder = new TextEncoder();
@@ -70,14 +89,8 @@ const IpfsComponent = () => {
     init();
   }, [helia]);
 
-  if (!helia || !id) {
-    return <h4>Connecting to IPFS...</h4>;
-  }
-
   return (
     <div>
-      <h4 data-test="id">ID: {id.toString()}</h4>
-      <h4 data-test="status">Status: {isOnline ? "Online" : "Offline"}</h4>
       <form onSubmit={handleUpload}>
         <input
           type="file"
@@ -85,6 +98,7 @@ const IpfsComponent = () => {
         />
         <button type="submit">Upload</button>
       </form>
+      <img src={previewImg}></img>
     </div>
   );
 };

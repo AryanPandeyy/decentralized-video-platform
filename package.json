@@ -9,7 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "kubo-rpc-client": "^3.0.1",
+    "@helia/unixfs": "^2.0.0",
+    "@libp2p/websockets": "^8.0.10",
+    "helia": "^3.0.0",
+    "libp2p": "^1.1.1",
     "next": "13.5.6",
     "react": "^18",
     "react-dom": "^18",
