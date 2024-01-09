@@ -11,11 +11,19 @@
   "dependencies": {
     "@helia/unixfs": "^2.0.0",
     "@libp2p/websockets": "^8.0.10",
+    "@metamask/providers": "^14.0.2",
+    "blockstore-core": "^4.3.10",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "datastore-core": "^9.2.7",
     "helia": "^3.0.0",
     "libp2p": "^1.1.1",
+    "lucide-react": "^0.307.0",
     "next": "13.5.6",
     "react": "^18",
     "react-dom": "^18",
+    "tailwind-merge": "^2.2.0",
+    "tailwindcss-animate": "^1.0.7",
     "web3": "^4.2.0"
   },
   "devDependencies": {
