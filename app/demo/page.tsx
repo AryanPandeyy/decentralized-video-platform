@@ -4,7 +4,7 @@ import { useState, FormEvent, useEffect, useRef } from "react";
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState();
   const [ipfs, setIpfs] = useState<IPFSHTTPClient>();
-  const videoRef = useRef();
+  const videoRef = useRef<HTMLVideoElement>();
   const imageRef = useRef();
   useEffect(() => {
     const init = async () => {
@@ -21,8 +21,13 @@ export default function Home() {
     if (!selectedFile) return;
     reader.readAsArrayBuffer(selectedFile);
     reader.onloadend = async () => {
-      const data = await ipfs.add(reader.result as ArrayBuffer);
-      console.log(data);
+      const { path } = await ipfs.add(reader.result as ArrayBuffer);
+      console.log(path);
+      const site = `https://ipfs.io/ipfs/${path}/`;
+      console.log(site);
+      if (videoRef.current) {
+        videoRef.current.src = site;
+      }
     };
   }
 
@@ -31,7 +36,11 @@ export default function Home() {
       <form onSubmit={handleSubmit}>
         <input
           type="file"
-          onChange={(e) => setSelectedFile(e.target.files[0])}
+          onChange={(e) => {
+            if (e.target.files) {
+              setSelectedFile(e.target.files[0]);
+            }
+          }}
         />
         <button type="submit">Upload Your Video</button>
       </form>
