@@ -1,38 +1,28 @@
 "use client";
-import { IPFSHTTPClient, create } from "kubo-rpc-client";
 import { useState, FormEvent, useEffect, useRef } from "react";
+import { IPFSHTTPClient, create } from "kubo-rpc-client";
+import Playlist from "@/build/contracts/PlayList.json";
 import { isUser } from "@/utils/isUser";
-import { loadBlockChainData } from "@/utils/web3";
-import { Contract, ContractAbi } from "web3";
-
-interface ConType {
-  accounts: string[];
-  networkID: bigint;
-  contract: Contract<ContractAbi>;
-  Playlist: Object;
-}
+import { ethers } from "ethers";
 
 export default function Home() {
   const [selectedVideoFile, setSelectedVideoFile] = useState<File>();
   const [selectedImageFile, setSelectedImageFile] = useState<File>();
   const [thumbHash, setThumbHash] = useState<string>("");
-  const [web3, setWeb3] = useState<ConType>();
   const [videoHash, setVideoHash] = useState<string>("");
   const [title, setTitle] = useState<string>("");
   const [desc, setDesc] = useState<string>("");
   const [ipfs, setIpfs] = useState<IPFSHTTPClient>();
-
-  const videoRef = useRef<HTMLVideoElement>();
-  const imageRef = useRef();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   const user = isUser();
 
   useEffect(() => {
     const init = async () => {
       const client = create({ url: "http://127.0.0.1:5001" });
-      const con: ConType = await loadBlockChainData();
-      setWeb3(con);
       setIpfs(client);
     };
+
     init();
   }, []);
 
@@ -43,6 +33,7 @@ export default function Home() {
     const reader = new window.FileReader();
     if (!selectedVideoFile) return;
     reader.readAsArrayBuffer(selectedVideoFile);
+
     reader.onloadend = async () => {
       const { path } = await ipfs.add(reader.result as ArrayBuffer);
       console.log(path);
@@ -57,81 +48,67 @@ export default function Home() {
     const imgReader = new window.FileReader();
     if (!selectedImageFile) return;
     imgReader.readAsArrayBuffer(selectedImageFile);
+
     imgReader.onloadend = async () => {
       const { path } = await ipfs.add(imgReader.result as ArrayBuffer);
       console.log(path);
-      setThumbHash(path);
       const site = `https://ipfs.io/ipfs/${path}/`;
+      setThumbHash(path);
       console.log(site);
       if (imageRef.current) {
         imageRef.current.src = site;
       }
     };
-    console.log("log ", await web3?.contract.methods.getVideos().call());
   }
 
-  const handleWeb3 = async (
-    thumbHash: string,
-    videoHash: string,
-    title: string,
-    desc: string,
-  ) => {
-    console.log(thumbHash, videoHash, title, desc);
-    if (thumbHash && videoHash && title && desc) {
-      await web3?.contract.methods
-        .addVideo(thumbHash, videoHash, title, desc)
-        .send({ from: `${user}` });
-    }
-    console.log("log ", await web3?.contract.methods.getVideos().call());
-  };
-
   return (
-    <div className="container flex flex-row gap-4 justify-center item-center border border-black p-20">
+    <div className="container mx-auto p-4 flex flex-col items-center justify-center space-y-6">
       <div>
-        <img ref={imageRef}></img>
-        <video ref={videoRef} controls></video>
+        <img
+          ref={imageRef}
+          className="w-96 h-56 object-cover"
+          alt="Thumbnail preview"
+        />
+        <video ref={videoRef} controls className="mt-2 w-96 h-56"></video>
       </div>
-      <div className="container flex flex-col gap-4 m-20">
-        <form onSubmit={handleSubmit}>
-          <input
-            type="file"
-            placeholder="Video File"
-            onChange={(e) => {
-              if (e.target.files) {
-                setSelectedVideoFile(e.target.files[0]);
-              }
-            }}
-          />
-          <br />
-          <input
-            type="file"
-            placeholder="Video Image"
-            onChange={(e) => {
-              if (e.target.files) {
-                setSelectedImageFile(e.target.files[0]);
-              }
-            }}
-          />
-          <br />
-          <input
-            value={title}
-            placeholder="Video Title"
-            onChange={(e) => {
-              setTitle(e.target.value);
-            }}
-          />
-          <br />
-          <input
-            value={desc}
-            placeholder="Video Description"
-            onChange={(e) => {
-              setDesc(e.target.value);
-            }}
-          />
-          <br />
-          <button type="submit">Upload Your Video</button>
-        </form>
-      </div>
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col space-y-4 w-full max-w-md"
+      >
+        <input
+          className="file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-opacity-80"
+          type="file"
+          onChange={(e) => {
+            if (e.target.files) setSelectedVideoFile(e.target.files[0]);
+          }}
+        />
+        <input
+          className="file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-opacity-80"
+          type="file"
+          onChange={(e) => {
+            if (e.target.files) setSelectedImageFile(e.target.files[0]);
+          }}
+        />
+        <input
+          className="py-2 px-4 border rounded"
+          value={title}
+          placeholder="Video Title"
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <textarea
+          className="py-2 px-4 border rounded"
+          value={desc}
+          placeholder="Video Description"
+          rows={3}
+          onChange={(e) => setDesc(e.target.value)}
+        ></textarea>
+        <button
+          type="submit"
+          className="py-2 px-4 bg-black text-white font-semibold rounded hover:bg-opacity-80"
+        >
+          Upload Your Video
+        </button>
+      </form>
     </div>
   );
 }

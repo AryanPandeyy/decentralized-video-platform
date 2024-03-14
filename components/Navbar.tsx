@@ -1,47 +1,58 @@
 "use client";
+
 import { isUser } from "@/utils/isUser";
-import { loadBlockChainData } from "@/utils/web3";
+import { useState } from "react";
 
-import Link from "next/link";
-import { FC } from "react";
-
-interface NavbarProps {}
-
-const Navbar: FC<NavbarProps> = () => {
+const Navbar = () => {
+  const [loggedIn, setLoggedIn] = useState(false);
   const user = isUser();
 
-  if (user) {
-    const handleLogOut = () => {
-      window.localStorage.removeItem("userAddress");
-      window.location.reload();
-    };
+  const handleSignOut = () => {
+    window.localStorage.removeItem("userAddress");
+  };
 
-    return (
-      <div className="flex flex-row p-2 justify-between border-black border-b">
-        <button onClick={handleLogOut}>LogOut</button>
-        <div className="flex flex-row justify-between gap-4">
-          <Link href="/videos">Videos</Link>
-          <Link href="/subscribed">Subscribed</Link>
-          <Link href="/videos">My Videos</Link>
-          <Link href="/upload">Upload</Link>
-        </div>
-        <p>{user}</p>
+  return (
+    <nav className="bg-white text-black p-4 flex justify-between items-center">
+      <div className="flex items-center space-x-4">
+        <a href="/">
+          <img src="/blockchain.jpg" alt="Logo" className="h-8 w-8" />
+        </a>
+        <h1 className="text-lg font-semibold">DVSP</h1>
       </div>
-    );
-  } else {
-    const handleSignIn = async () => {
-      const blockchainAccount = await loadBlockChainData();
-      window.localStorage.setItem("userAddress", blockchainAccount.accounts[0]);
-
-      window.location.reload();
-    };
-
-    return (
-      <div className="flex flex-row p-2 justify-between border-black border-b">
-        <button onClick={handleSignIn}>Sign In</button>
-      </div>
-    );
-  }
+      <ul className="flex space-x-4">
+        {user ? (
+          <>
+            <li>
+              <button onClick={handleSignOut} className="text-lg">
+                Logout
+              </button>
+            </li>
+            <li>
+              <a href="/video" className="text-lg">
+                Videos
+              </a>
+            </li>
+            <li>
+              <a href="#" className="text-lg">
+                My Videos
+              </a>
+            </li>
+            <li>
+              <a href="/upload" className="text-lg">
+                Upload
+              </a>
+            </li>
+          </>
+        ) : (
+          <li>
+            <a href="/signin" className="text-lg">
+              Sign In
+            </a>
+          </li>
+        )}
+      </ul>
+    </nav>
+  );
 };
 
 export default Navbar;
