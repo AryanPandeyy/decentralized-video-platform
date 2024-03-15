@@ -1,65 +1,91 @@
 "use client";
 import { useState, FormEvent, useEffect, useRef } from "react";
-import { IPFSHTTPClient, create } from "kubo-rpc-client";
 import Playlist from "@/build/contracts/PlayList.json";
 import { isUser } from "@/utils/isUser";
 import { ethers } from "ethers";
+import axios from "axios";
 
 export default function Home() {
-  const [selectedVideoFile, setSelectedVideoFile] = useState<File>();
-  const [selectedImageFile, setSelectedImageFile] = useState<File>();
+  const [selectedVideoFile, setSelectedVideoFile] = useState();
+  const [selectedImageFile, setSelectedImageFile] = useState();
   const [thumbHash, setThumbHash] = useState<string>("");
   const [videoHash, setVideoHash] = useState<string>("");
   const [title, setTitle] = useState<string>("");
   const [desc, setDesc] = useState<string>("");
-  const [ipfs, setIpfs] = useState<IPFSHTTPClient>();
   const videoRef = useRef<HTMLVideoElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const user = isUser();
 
-  useEffect(() => {
-    const init = async () => {
-      const client = create({ url: "http://127.0.0.1:5001" });
-      setIpfs(client);
-    };
-
-    init();
-  }, []);
-
   async function handleSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
-    if (!ipfs) return;
+    const videoData = new FormData();
+    videoData.append("file", selectedVideoFile);
+    const resVideoFile = await axios.post(
+      "https://api.pinata.cloud/pinning/pinFileToIPFS",
+      videoData,
+      {
+        headers: {
+          maxBodyLength: "Infinity",
+          Authorization: `Bearer ${JWT}`,
+          "Content-Type": `video/mpv`,
+        },
+      },
+    );
 
-    const reader = new window.FileReader();
-    if (!selectedVideoFile) return;
-    reader.readAsArrayBuffer(selectedVideoFile);
-
-    reader.onloadend = async () => {
-      const { path } = await ipfs.add(reader.result as ArrayBuffer);
-      console.log(path);
-      setVideoHash(path);
-      const site = `https://ipfs.io/ipfs/${path}/`;
-      console.log(site);
-      if (videoRef.current) {
-        videoRef.current.src = site;
-      }
-    };
-
-    const imgReader = new window.FileReader();
-    if (!selectedImageFile) return;
-    imgReader.readAsArrayBuffer(selectedImageFile);
-
-    imgReader.onloadend = async () => {
-      const { path } = await ipfs.add(imgReader.result as ArrayBuffer);
-      console.log(path);
-      const site = `https://ipfs.io/ipfs/${path}/`;
-      setThumbHash(path);
-      console.log(site);
-      if (imageRef.current) {
-        imageRef.current.src = site;
-      }
-    };
+    const imageData = new FormData();
+    imageData.append("file", selectedImageFile);
+    const resImageFile = await axios.post(
+      "https://api.pinata.cloud/pinning/pinFileToIPFS",
+      imageData,
+      {
+        headers: {
+          Authorization: `Bearer ${JWT}`,
+          "Content-Type": `image/jpeg`,
+        },
+      },
+    );
+    console.log(resVideoFile.data.IpfsHash);
+    console.log(resImageFile.data.IpfsHash);
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    const signer = await provider.getSigner();
+    const contract = new ethers.Contract(
+      Playlist.networks[5777].address,
+      Playlist.abi,
+      signer,
+    );
+    const data = await contract.addVideo(
+      resImageFile.data.IpfsHash,
+      resVideoFile.data.IpfsHash,
+      title,
+      desc,
+    );
+    console.log(data);
   }
+
+  const setVideoFileState = (e) => {
+    if (!e.target.files) return;
+    const data = e.target.files[0];
+    console.log("DATA chnage State ", data);
+    const reader = new window.FileReader();
+    reader.readAsArrayBuffer(data);
+    reader.onloadend = () => {
+      setSelectedVideoFile(e.target.files[0]);
+    };
+    e.preventDefault();
+  };
+
+  const setImageFileState = (e) => {
+    if (!e.target.files) return;
+    const data = e.target.files[0];
+    console.log(data);
+    const reader = new window.FileReader();
+    reader.readAsArrayBuffer(data);
+    reader.onloadend = async () => {
+      setSelectedImageFile(e.target.files[0]);
+    };
+    e.preventDefault();
+  };
 
   return (
     <div className="container mx-auto p-4 flex flex-col items-center justify-center space-y-6">
@@ -78,16 +104,12 @@ export default function Home() {
         <input
           className="file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-opacity-80"
           type="file"
-          onChange={(e) => {
-            if (e.target.files) setSelectedVideoFile(e.target.files[0]);
-          }}
+          onChange={setVideoFileState}
         />
         <input
           className="file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-opacity-80"
           type="file"
-          onChange={(e) => {
-            if (e.target.files) setSelectedImageFile(e.target.files[0]);
-          }}
+          onChange={setImageFileState}
         />
         <input
           className="py-2 px-4 border rounded"

@@ -3,6 +3,7 @@ pragma solidity >= 0.4.22 < 0.9.0;
 pragma experimental ABIEncoderV2;
 
 contract PlayList {
+
   struct video {
     uint id;
     address creator;
@@ -11,6 +12,7 @@ contract PlayList {
     string thumbHash;
     string videoHash;
   } video[] public videoArray;
+
   function addVideo(string memory _thumbHash, string memory _videoHash,
                     string memory _title,
                     string memory _desc) public returns(bool) {
@@ -28,6 +30,7 @@ contract PlayList {
     }));
     return true;
   }
+
   function isExisting(string memory _thumbHash,
                       string memory _videoHash) public view returns(bool) {
     for (uint i = 0; i < videoArray.length; i++) {
@@ -41,11 +44,14 @@ contract PlayList {
     return false;
   }
 
-  function getVideo(uint _id) public view returns(string memory) {
-    return string(
-        abi.encodePacked(videoArray[_id].title, "/", videoArray[_id].thumbHash,
-                         "/", videoArray[_id].videoHash, "/",
-                         videoArray[_id].desc, "/", videoArray[_id].creator));
+  function getVideo(uint _id) public view returns(video memory) {
+    /* return string( */
+    /*     abi.encodePacked(videoArray[_id].title, "/",
+     * videoArray[_id].thumbHash, */
+    /*                      "/", videoArray[_id].videoHash, "/", */
+    /*                      videoArray[_id].desc, "/",
+     * videoArray[_id].creator)); */
+    return videoArray[_id];
   }
 
   function getVideos() public view returns(video[] memory) {
