@@ -45,14 +45,28 @@ contract PlayList {
   }
 
   function getVideo(uint _id) public view returns(video memory) {
-    /* return string( */
-    /*     abi.encodePacked(videoArray[_id].title, "/",
-     * videoArray[_id].thumbHash, */
-    /*                      "/", videoArray[_id].videoHash, "/", */
-    /*                      videoArray[_id].desc, "/",
-     * videoArray[_id].creator)); */
     return videoArray[_id];
   }
+
+  function getMyVideo(address _user) public view returns(video[] memory) {
+    uint count = 0;
+    for (uint i = 0; i < videoArray.length; i++) {
+      if (videoArray[i].creator == _user) {
+        count++;
+      }
+    }
+    video[] memory myVideos = new video[](count);
+    uint index = 0;
+    for (uint j = 0; j < videoArray.length; j++) {
+      if (videoArray[j].creator == _user) {
+        myVideos[index] = videoArray[j];
+        index++;
+      }
+    }
+    return myVideos;
+  }
+
+  function getMyAddress() public returns(address) { return msg.sender; }
 
   function getVideos() public view returns(video[] memory) {
     return videoArray;
